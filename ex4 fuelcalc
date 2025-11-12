@@ -1,0 +1,111 @@
+Fuel Efficiancy Code: 4
+import 'package:flutter/material.dart';
+
+void main() => runApp(CarMileageCalculator());
+
+class CarMileageCalculator extends StatefulWidget {
+  @override
+  _CarMileageCalculatorState createState() => _CarMileageCalculatorState();
+}
+
+class _CarMileageCalculatorState extends State<CarMileageCalculator> {
+  final _formKey = GlobalKey<FormState>();
+  final TextEditingController _distanceController = TextEditingController();
+  final TextEditingController _fuelController = TextEditingController();
+
+  String _result = "";
+
+  void _calculateMileage() {
+    if (_formKey.currentState!.validate()) {
+      double distance = double.tryParse(_distanceController.text) ?? 0.0;
+      double fuel = double.tryParse(_fuelController.text) ?? 0.0;
+
+      double mileage = distance / fuel;
+      String performance;
+
+      if (mileage >= 15) {
+        performance = "Excellent efficiency";
+      } else if (mileage >= 10 && mileage < 15) {
+        performance = "Average efficiency";
+      } else {
+        performance = "Poor efficiency";
+      }
+
+      setState(() {
+        _result = "Your car mileage is ${mileage.toStringAsFixed(2)} km per liter - $performance";
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Car Mileage Calculator',
+      home: Scaffold(
+        appBar: AppBar(
+          title: Text('Car Mileage Calculator'),
+          backgroundColor: Colors.deepPurple,
+        ),
+        body: Container(
+          padding: EdgeInsets.all(20),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _distanceController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Enter distance (km)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the distance';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter valid number';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 10),
+                TextFormField(
+                  controller: _fuelController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Enter fuel (liters)',
+                    border: OutlineInputBorder(),
+                  ),
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Please enter the fuel';
+                    }
+                    if (double.tryParse(value) == null) {
+                      return 'Please enter valid number';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _calculateMileage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text('Calculate Mileage'),
+                ),
+                SizedBox(height: 10),
+                Text(
+                  _result,
+                  style: TextStyle(color: Colors.green, fontSize: 18),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
