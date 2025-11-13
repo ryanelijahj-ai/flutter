@@ -1,3 +1,6 @@
+CLEAR FILE
+
+
 Fuel Efficiancy Code: 4
 import 'package:flutter/material.dart';
 
@@ -108,4 +111,163 @@ class _CarMileageCalculatorState extends State<CarMileageCalculator> {
       ),
     );
   }
+}
+
+EX5 
+// main.dart
+import 'package:flutter/material.dart';
+import 'student_details_screen.dart';
+import 'student_result_screen.dart';
+
+void main() {
+  runApp(MyApp());
+}
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Student Mark Calculation',
+      initialRoute: '/',
+      routes: {
+        '/': (context) => StudentDetailsScreen(),
+        '/result': (context) => StudentResultScreen(),
+      },
+    );
+  }
+}
+
+// student_data_model.dart
+class Student {
+  final String name;
+  final int regNumber, mark1, mark2, mark3;
+
+  Student({
+    required this.name,
+    required this.regNumber,
+    required this.mark1,
+    required this.mark2,
+    required this.mark3,
+  });
+}
+
+// Inside submit button function of StudentDetailsScreen
+if (_formKey.currentState!.validate()) {
+  Student student = Student(
+    name: nameController.text,
+    regNumber: int.parse(regNumberController.text),
+    mark1: int.parse(mark1Controller.text),
+    mark2: int.parse(mark2Controller.text),
+    mark3: int.parse(mark3Controller.text),
+  );
+
+  Navigator.pushNamed(
+    context,
+    '/result',
+    arguments: student,
+  );
+}
+
+// Inside StudentResultScreen build method:
+final student = ModalRoute.of(context)!.settings.arguments as Student;
+// student.mark1, student.mark2, student.mark3 for calculations
+
+EX6 :
+dependencies:
+  sqflite: ^2.3.0
+  path_provider: ^2.0.14
+
+class Student {
+  int? id;
+  String name;
+  String regNumber;
+  double cgpa;
+
+  Student({this.id, required this.name, required this.regNumber, required this.cgpa});
+
+  factory Student.fromRow(Map<String, dynamic> row) => Student(
+    id: row['id'],
+    name: row['name'],
+    regNumber: row['regNumber'],
+    cgpa: row['cgpa'],
+  );
+}
+
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'student.dart';
+
+class DatabaseHelper {
+  static Database? _db;
+  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+
+  DatabaseHelper._privateConstructor();
+
+  Future<Database> get database async {
+    if (_db != null) return _db!;
+    _db = await _initDatabase();
+    return _db!;
+  }
+
+  Future<Database> _initDatabase() async {
+    final documentsDirectory = await getApplicationDocumentsDirectory();
+    final path = join(documentsDirectory.path, 'students.db');
+    return await openDatabase(path, version: 1, onCreate: _onCreate);
+  }
+
+  Future _onCreate(Database db, int version) async {
+    await db.execute('''
+      CREATE TABLE students (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT,
+        regNumber TEXT,
+        cgpa REAL
+      )
+    ''');
+  }
+
+  Future<int> insertStudent(Student student) async {
+    final db = await instance.database;
+    return await db.insert('students', {
+      'name': student.name,
+      'regNumber': student.regNumber,
+      'cgpa': student.cgpa
+    });
+  }
+
+  Future<List<Student>> readAllStudents() async {
+    final db = await instance.database;
+    final students = await db.query('students');
+    return students.map((row) => Student.fromRow(row)).toList();
+  }
+}
+
+class StudentsApp extends StatefulWidget { ... }
+
+class _StudentsAppState extends State<StudentsApp> {
+  // Controllers & State
+  final nameController = TextEditingController();
+  final regNumberController = TextEditingController();
+  final cgpaController = TextEditingController();
+  List<Student> students = [];
+
+  void saveStudent() async {
+    final student = Student(
+      name: nameController.text,
+      regNumber: regNumberController.text,
+      cgpa: double.parse(cgpaController.text)
+    );
+    await DatabaseHelper.instance.insertStudent(student);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Student details saved'))
+    );
+    fetchStudents();
+  }
+
+  void fetchStudents() async {
+    final allStudents = await DatabaseHelper.instance.readAllStudents();
+    setState(() { students = allStudents; });
+  }
+
+  // Widget build includes Form for input and ListView to display students
 }
