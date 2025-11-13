@@ -383,101 +383,284 @@ class BudgetResultScreen extends StatelessWidget {
 }
 
 EX6 :
+//pubspec.yaml
 dependencies:
+  flutter:
+    sdk: flutter
   sqflite: ^2.3.0
-  path_provider: ^2.0.14
+  path_provider: ^2.1.2
 
-class Student {
-  int? id;
-  String name;
-  String regNumber;
-  double cgpa;
-
-  Student({this.id, required this.name, required this.regNumber, required this.cgpa});
-
-  factory Student.fromRow(Map<String, dynamic> row) => Student(
-    id: row['id'],
-    name: row['name'],
-    regNumber: row['regNumber'],
-    cgpa: row['cgpa'],
-  );
+//main.dart
+import 'package:flutter/material.dart';
+import 'bank.dart';
+import 'data_helper.dart';
+void main() {
+  runApp(MaterialApp(
+    title: "Bank Account Manager",
+    home: BankApp(),
+  ));
 }
 
-import 'package:sqflite/sqflite.dart';
-import 'package:path/path.dart';
-import 'student.dart';
+class BankApp extends StatefulWidget {
+  const BankApp({super.key});
 
-class DatabaseHelper {
-  static Database? _db;
-  static final DatabaseHelper instance = DatabaseHelper._privateConstructor();
+  @override
+  State<BankApp> createState() => _BankAppState();
+}
 
-  DatabaseHelper._privateConstructor();
+class _BankAppState extends State<BankApp> {
+  final _formkey = GlobalKey<FormState>();
+  final _accountHolderController = TextEditingController();
+  final _initialBalanceController = TextEditingController();
+  List<BankAccount> _accounts = [];
+  double _totalBalance = 0.0;
 
-  Future<Database> get database async {
-    if (_db != null) return _db!;
-    _db = await _initDatabase();
-    return _db!;
-  }
-
-  Future<Database> _initDatabase() async {
-    final documentsDirectory = await getApplicationDocumentsDirectory();
-    final path = join(documentsDirectory.path, 'students.db');
-    return await openDatabase(path, version: 1, onCreate: _onCreate);
-  }
-
-  Future _onCreate(Database db, int version) async {
-    await db.execute('''
-      CREATE TABLE students (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT,
-        regNumber TEXT,
-        cgpa REAL
-      )
-    ''');
-  }
-
-  Future<int> insertStudent(Student student) async {
-    final db = await instance.database;
-    return await db.insert('students', {
-      'name': student.name,
-      'regNumber': student.regNumber,
-      'cgpa': student.cgpa
+  void _showAllAccounts() async {
+    final accounts = await DatabaseHelper.instance.readAllAccounts();
+    final total = await DatabaseHelper.instance.getTotalBalance();
+    setState(() {
+      _accounts = accounts;
+      _totalBalance = total;
     });
   }
+  
+  @override
+  void initState() {
+    super.initState();
+    _showAllAccounts();
+  }
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Bank Account Manager"),
+        backgroundColor: Colors.blueAccent,
+      ),
+      body: Form(
+          key: _formkey,
+          child: Container(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              children: [
+                TextFormField(
+                  controller: _accountHolderController,
+                  decoration: InputDecoration(
+                      labelText: "Enter Account Holder Name",
+                      border: OutlineInputBorder()
+                  ),
+                  validator: (value){
+                    if(value == null || value.isEmpty){
+                      return "Enter Account Holder Name";
+                    }
+                  },
+                ),
+                SizedBox(height: 20,),
+                TextFormField(
+                  controller: _initialBalanceController,
+                  decoration: InputDecoration(
+                      labelText: "Enter Initial Balance",
+                      border: OutlineInputBorder()
+                  ),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  validator: (value) {
+                    if(value == null || value.isEmpty){
+                      return "Enter Initial Balance";
+                    }
+                    if(double.tryParse(value) == null){
+                      return "Enter a valid number";
+                    }
+                  },
+                ),
+                SizedBox(height: 20,),
+                ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueGrey,
+                        foregroundColor: Colors.white
+                    ),
+                    onPressed: () async {
+                      if(_formkey.currentState!.validate()){
+                        String accountHolder = _accountHolderController.text;
+                        double initialBalance = double.parse(_initialBalanceController.text);
 
-  Future<List<Student>> readAllStudents() async {
-    final db = await instance.database;
-    final students = await db.query('students');
-    return students.map((row) => Student.fromRow(row)).toList();
+                        //Create BankAccount object
+                        BankAccount account = BankAccount(
+                          accountHolder: accountHolder, 
+                          balance: initialBalance
+                        );
+                        await DatabaseHelper.instance.insertAccount(account);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text("Account Created Successfully"))
+                        );
+                        _accountHolderController.clear();
+                        _initialBalanceController.clear();
+                        _showAllAccounts();
+                      }
+                    },
+                    child: Text("Create Account")),
+                SizedBox(height: 20,),
+                Container(
+                  padding: EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade100,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        "Total Money in Bank:",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        "\$${_totalBalance.toStringAsFixed(2)}",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 20,),
+                Expanded(
+                    child: ListView.builder(
+                      itemCount: _accounts.length,
+                      itemBuilder: (context, index) {
+                        final account = _accounts[index];
+                        bool isZeroBalance = account.balance == 0.0;
+                        return Container(
+                          margin: EdgeInsets.only(bottom: 8),
+                          decoration: BoxDecoration(
+                            color: isZeroBalance ? Colors.red.shade50 : Colors.white,
+                            border: Border.all(
+                              color: isZeroBalance ? Colors.red : Colors.grey.shade300,
+                              width: isZeroBalance ? 2 : 1,
+                            ),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: isZeroBalance ? Colors.red : Colors.blueAccent,
+                              child: Text(
+                                account.accountHolder.isNotEmpty 
+                                    ? account.accountHolder[0].toUpperCase() 
+                                    : "?",
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ),
+                            title: Text(
+                              account.accountHolder,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: isZeroBalance ? Colors.red.shade900 : Colors.black,
+                              ),
+                            ),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Balance: \$${account.balance.toStringAsFixed(2)}"),
+                                if(isZeroBalance)
+                                  Padding(
+                                    padding: EdgeInsets.only(top: 4),
+                                    child: Text(
+                                      "Low Balance!",
+                                      style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    )
+                )
+              ],
+            ),
+          )),
+    );
   }
 }
 
-class StudentsApp extends StatefulWidget { ... }
+//data_helper.dart
+import 'package:sqflite/sqflite.dart';
+import 'package:path/path.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'bank.dart';
 
-class _StudentsAppState extends State<StudentsApp> {
-  // Controllers & State
-  final nameController = TextEditingController();
-  final regNumberController = TextEditingController();
-  final cgpaController = TextEditingController();
-  List<Student> students = [];
+class DatabaseHelper{
+  //Create Database instances
+  static Database? _database;
+  static DatabaseHelper instance = DatabaseHelper._privateConstructer();
+  DatabaseHelper._privateConstructer();
 
-  void saveStudent() async {
-    final student = Student(
-      name: nameController.text,
-      regNumber: regNumberController.text,
-      cgpa: double.parse(cgpaController.text)
-    );
-    await DatabaseHelper.instance.insertStudent(student);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Student details saved'))
-    );
-    fetchStudents();
+  Future<Database> get database async {
+    if(_database != null) return _database!;
+
+    //create database
+    Directory dir = await getApplicationDocumentsDirectory();
+    String path = join(dir.path, "accounts.db");
+    _database = await openDatabase(
+      path,
+      version: 1,
+      onCreate: (db, version) async {
+        String sql = "CREATE TABLE accounts(id INTEGER PRIMARY KEY AUTOINCREMENT, accountHolder TEXT, balance REAL)";
+        await db.execute(sql);
+      },
+      );
+      return _database!;
+  }
+  //insert Record
+  Future<int> insertAccount(BankAccount account) async {
+    Database db = await instance.database;
+    return await db.insert('accounts', account.toMap());
   }
 
-  void fetchStudents() async {
-    final allStudents = await DatabaseHelper.instance.readAllStudents();
-    setState(() { students = allStudents; });
+  Future<List<BankAccount>> readAllAccounts() async {
+    Database db = await instance.database;
+    final records = await db.query("accounts");
+    return records.map((record) => BankAccount.fromRow(record)).toList();
   }
+  
+  Future<double> getTotalBalance() async {
+    Database db = await instance.database;
+    final result = await db.rawQuery("SELECT SUM(balance) as total FROM accounts");
+    return result.first['total'] as double? ?? 0.0;
+  }
+}
 
-  // Widget build includes Form for input and ListView to display students
+//bank.dart
+class BankAccount {
+  int? id;
+  String accountHolder;
+  double balance;
+  
+  BankAccount({
+    this.id,
+    required this.accountHolder,
+    required this.balance
+  });
+
+  factory BankAccount.fromRow(Map<String, dynamic> row){
+    return BankAccount(
+      id: row['id'],
+      accountHolder: row['accountHolder'],
+      balance: row['balance']);
+  }
+  
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'accountHolder': accountHolder,
+      'balance': balance,
+    };
+  }
 }
