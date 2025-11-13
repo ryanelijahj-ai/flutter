@@ -115,63 +115,272 @@ class _CarMileageCalculatorState extends State<CarMileageCalculator> {
 }
 
 EX5 
-// main.dart
+#main.dart
 import 'package:flutter/material.dart';
-import 'student_details_screen.dart';
-import 'student_result_screen.dart';
+import 'budget_input_screen.dart';
+import 'budget_result_screen.dart';
 
-void main() {
-  runApp(MyApp());
-}
+void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Student Mark Calculation',
+      title: 'Monthly Budget Manager',
       initialRoute: '/',
       routes: {
-        '/': (context) => StudentDetailsScreen(),
-        '/result': (context) => StudentResultScreen(),
+        '/': (context) => BudgetInputScreen(),
+        '/result': (context) => BudgetResultScreen(),
       },
     );
   }
 }
 
-// student_data_model.dart
-class Student {
-  final String name;
-  final int regNumber, mark1, mark2, mark3;
+#budget_data_model.dart
+class BudgetData {
+  final double income;
+  final double rent;
+  final double food;
+  final double transport;
+  final double others;
 
-  Student({
-    required this.name,
-    required this.regNumber,
-    required this.mark1,
-    required this.mark2,
-    required this.mark3,
+  BudgetData({
+    required this.income,
+    required this.rent,
+    required this.food,
+    required this.transport,
+    required this.others,
   });
 }
 
-// Inside submit button function of StudentDetailsScreen
-if (_formKey.currentState!.validate()) {
-  Student student = Student(
-    name: nameController.text,
-    regNumber: int.parse(regNumberController.text),
-    mark1: int.parse(mark1Controller.text),
-    mark2: int.parse(mark2Controller.text),
-    mark3: int.parse(mark3Controller.text),
-  );
+#budget_input_screen.dart
+import 'package:flutter/material.dart';
+import 'budget_data_model.dart';
 
-  Navigator.pushNamed(
-    context,
-    '/result',
-    arguments: student,
-  );
+class BudgetInputScreen extends StatefulWidget {
+  const BudgetInputScreen({super.key});
+
+  @override
+  _BudgetInputScreenState createState() => _BudgetInputScreenState();
 }
 
-// Inside StudentResultScreen build method:
-final student = ModalRoute.of(context)!.settings.arguments as Student;
-// student.mark1, student.mark2, student.mark3 for calculations
+class _BudgetInputScreenState extends State<BudgetInputScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _incomeController = TextEditingController();
+  final _rentController = TextEditingController();
+  final _foodController = TextEditingController();
+  final _transportController = TextEditingController();
+  final _othersController = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Budget Input Form'),
+        backgroundColor: Colors.amberAccent,
+      ),
+      body: Container(
+        padding: EdgeInsets.all(20),
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              children: [
+                // Monthly Income
+                TextFormField(
+                  controller: _incomeController,
+                  decoration: InputDecoration(
+                    labelText: 'Monthly Income',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return 'Enter monthly income';
+                    }
+                    final v = double.tryParse(value);
+                    if (v == null || v <= 0) {
+                      return 'Income must be positive';
+                    }
+                    return null;
+                  },
+                ),
+                SizedBox(height: 20),
+                // Rent/EMI
+                TextFormField(
+                  controller: _rentController,
+                  decoration: InputDecoration(
+                    labelText: 'Rent/EMI',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) => value == null || value.isEmpty ? 'Enter rent/EMI' : null,
+                ),
+                SizedBox(height: 20),
+                // Food Expenses
+                TextFormField(
+                  controller: _foodController,
+                  decoration: InputDecoration(
+                    labelText: 'Food Expenses',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) => value == null || value.isEmpty ? 'Enter food expenses' : null,
+                ),
+                SizedBox(height: 20),
+                // Transport Expenses
+                TextFormField(
+                  controller: _transportController,
+                  decoration: InputDecoration(
+                    labelText: 'Transport Expenses',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) => value == null || value.isEmpty ? 'Enter transport expenses' : null,
+                ),
+                SizedBox(height: 20),
+                // Other Expenses
+                TextFormField(
+                  controller: _othersController,
+                  decoration: InputDecoration(
+                    labelText: 'Other Expenses',
+                    border: OutlineInputBorder(),
+                  ),
+                  keyboardType: TextInputType.number,
+                  validator: (value) => value == null || value.isEmpty ? 'Enter other expenses' : null,
+                ),
+                SizedBox(height: 20),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.deepPurple,
+                    foregroundColor: Colors.white,
+                  ),
+                  onPressed: () {
+                    if (_formKey.currentState!.validate()) {
+                      final budget = BudgetData(
+                        income: double.parse(_incomeController.text),
+                        rent: double.parse(_rentController.text),
+                        food: double.parse(_foodController.text),
+                        transport: double.parse(_transportController.text),
+                        others: double.parse(_othersController.text),
+                      );
+                      Navigator.pushNamed(
+                        context,
+                        '/result',
+                        arguments: budget,
+                      );
+                    }
+                  },
+                  child: Text('Submit'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
+#budget_result_screen.dart
+import 'package:flutter/material.dart';
+import 'budget_data_model.dart';
+
+class BudgetResultScreen extends StatelessWidget {
+  const BudgetResultScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final budget = ModalRoute.of(context)!.settings.arguments as BudgetData;
+
+    double remaining = budget.income - (budget.rent + budget.food + budget.transport + budget.others);
+    bool isOverspending = remaining < 0;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Monthly Report'),
+        backgroundColor: Colors.amberAccent,
+      ),
+      body: Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Income and Outgoings
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.attach_money),
+                title: Text('Monthly Income'),
+                trailing: Text(budget.income.toStringAsFixed(2)),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.home),
+                title: Text('Rent/EMI'),
+                trailing: Text(budget.rent.toStringAsFixed(2)),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.fastfood),
+                title: Text('Food Expenses'),
+                trailing: Text(budget.food.toStringAsFixed(2)),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.directions_bus),
+                title: Text('Transport Expenses'),
+                trailing: Text(budget.transport.toStringAsFixed(2)),
+              ),
+            ),
+            Card(
+              child: ListTile(
+                leading: Icon(Icons.miscellaneous_services),
+                title: Text('Other Expenses'),
+                trailing: Text(budget.others.toStringAsFixed(2)),
+              ),
+            ),
+            SizedBox(height: 20),
+            // Remaining Balance
+            Card(
+              color: isOverspending ? Colors.red.shade100 : Colors.green.shade100,
+              child: ListTile(
+                leading: Icon(Icons.account_balance_wallet),
+                title: Text(
+                  'Remaining Balance',
+                  style: TextStyle(
+                    color: isOverspending ? Colors.red : Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                trailing: Text(
+                  remaining.toStringAsFixed(2),
+                  style: TextStyle(
+                    color: isOverspending ? Colors.red : Colors.green,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                subtitle: isOverspending
+                    ? Text(
+                        'You are overspending!',
+                        style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                      )
+                    : Text(
+                        'Good! You are within budget.',
+                        style: TextStyle(color: Colors.green, fontWeight: FontWeight.w600),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 EX6 :
 dependencies:
