@@ -1,3 +1,7 @@
+CLEAR FILE
+Remove-Item (Get-PSReadlineOption).HistorySavePath
+
+exp1
 git init 
 git add .
 git commit -m "initial commit"
